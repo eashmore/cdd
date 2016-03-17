@@ -85,11 +85,7 @@ def predict_end_date(amount, *uses)
     return use_node.next_date if current_amount == 0
 
     current_date = use_node.next_date
-    if use_node.use.periodicity == 'daily'
-      update_use(use_node, daily_queue)
-    else
-      update_use(use_node, weekly_queue)
-    end
+    update_use(use_node, daily_queue, weekly_queue)
   end
 end
 
@@ -103,26 +99,37 @@ end
 def next_use_node(daily_queue, weekly_queue, uses_array)
   if daily_queue.empty? && weekly_queue.empty?
     return UseNode.new(uses_array.pop)
-  elsif daily_queue.empty? || weekly_queue.empty?
-    use_queue = daily_queue.empty? ? weekly_queue : daily_queue
   else
-    if daily_queue.peek_date <= weekly_queue.peek_date
-      use_queue = daily_queue
-    else
-      use_queue = weekly_queue
-    end
+    queue = next_queue(daily_queue, weekly_queue)
   end
 
-  unless uses_array.empty? || use_queue.peek_date < uses_array.last.start_date
+  unless uses_array.empty? || queue.peek_date < uses_array.last.start_date
     return UseNode.new(uses_array.pop)
   end
 
-  use_queue.dequeue
+  queue.dequeue
+end
+
+# find which queue has a sooner occuring use
+def next_queue(daily, weekly)
+  if daily.empty? || weekly.empty?
+    use_queue = daily.empty? ? weekly : daily
+  else
+    use_queue = daily.peek_date <= weekly.peek_date ? daily : weekly
+  end
+  use_queue
 end
 
 # find the next time the use will occur and check if it passed the end date
-def update_use(use_node, use_queue)
-  date_change = use_node.use.periodicity == 'daily' ? 1 : 7
+def update_use(use_node, daily_queue, weekly_queue)
+  if use_node.use.periodicity == 'daily'
+    use_queue = daily_queue
+    date_change = 1
+  else
+    use_queue = weekly_queue
+    date_change = 7
+  end
+
   use_node.next_date += date_change
   if use_node.use.end_date.nil? || use_node.use.end_date > use_node.next_date
     use_queue.enqueue(use_node)

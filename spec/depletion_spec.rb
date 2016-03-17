@@ -179,26 +179,27 @@ describe '#update_use' do
     use_weekly = RecurringUse.new(10, 'weekly', Date.today, Date.today + 5)
     UseNode.new(use_weekly)
   end
-  let(:queue) { UseQueue.new }
+  let(:daily) { UseQueue.new }
+  let(:weekly) { UseQueue.new }
 
   it 'updates the date for daily uses' do
-    update_use(node_daily, queue)
+    update_use(node_daily, daily, weekly)
     expect(node_daily.next_date).to eq(Date.today + 1)
   end
 
   it 'updates the date for weekly uses' do
-    update_use(node_weekly, queue)
+    update_use(node_weekly, daily, weekly)
     expect(node_weekly.next_date).to eq(Date.today + 7)
   end
 
   it 'enqueues uses not past their end date' do
-    update_use(node_daily, queue)
-    expect(queue.dequeue).to eq(node_daily)
+    update_use(node_daily, daily, weekly)
+    expect(daily.dequeue).to eq(node_daily)
   end
 
   it 'does not enqueue uses past their end date' do
-    update_use(node_weekly, queue)
-    expect(queue.empty?).to eq(true)
+    update_use(node_weekly, daily, weekly)
+    expect(weekly.empty?).to eq(true)
   end
 end
 
