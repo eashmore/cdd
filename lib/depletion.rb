@@ -1,4 +1,5 @@
 require 'date'
+require_relative './use_queue.rb'
 
 class RecurringUse
   attr_reader :amount, :periodicity, :start_date, :end_date
@@ -11,66 +12,8 @@ class RecurringUse
   end
 end
 
-class UseQueue
-  def initialize
-    @head = nil
-    @tail = nil
-    @length = 0
-  end
-
-  def enqueue(use_node)
-    if empty?
-      @head = use_node
-    else
-      @tail.next = use_node
-    end
-
-    @tail = use_node
-    @length += 1
-    nil
-  end
-
-  def dequeue
-    use_node = @head
-    @head = use_node.next
-    @length -= 1
-    use_node
-  end
-
-  def peek_date
-    @head.next_date
-  end
-
-  def empty?
-    @length == 0
-  end
-end
-
-class UseNode
-  attr_reader :use
-  attr_accessor :next_date, :next
-
-  def initialize(use)
-    @use = use
-    @next_date = get_next_date(use)
-    @next = nil
-  end
-
-  # calculate next use date if start date has passed
-  def get_next_date(use)
-    today = Date.today
-    return use.start_date if use.start_date >= today
-    return today if use.periodicity == 'daily'
-
-    new_date = use.start_date
-    new_date += 7 until new_date >= today
-    new_date
-  end
-end
-
 # simlate uses until current amount <= 0 to find the date of depletion
-def predict_end_date(amount, *uses)
-  current_amount = amount
+def predict_end_date(current_amount, *uses)
   current_date = Date.today
   daily_queue = UseQueue.new
   weekly_queue = UseQueue.new
@@ -100,14 +43,14 @@ def next_use_node(daily_queue, weekly_queue, uses_array)
   if daily_queue.empty? && weekly_queue.empty?
     return UseNode.new(uses_array.pop)
   else
-    queue = next_queue(daily_queue, weekly_queue)
+    use_queue = next_queue(daily_queue, weekly_queue)
   end
 
-  unless uses_array.empty? || queue.peek_date < uses_array.last.start_date
+  unless uses_array.empty? || use_queue.peek_date < uses_array.last.start_date
     return UseNode.new(uses_array.pop)
   end
 
-  queue.dequeue
+  use_queue.dequeue
 end
 
 # find which queue has a sooner occuring use
